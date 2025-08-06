@@ -458,6 +458,49 @@ function layout(g, opts) {
       time("  buildLayoutGraph", () => buildLayoutGraph(g));
     time("  runLayout",        () => runLayout(layoutGraph, time, opts));
     time("  updateInputGraph", () => updateInputGraph(g, layoutGraph));
+    time("  applyPaddingAdjustments", () => applyPaddingAdjustments(g));
+  });
+}
+
+function applyPaddingAdjustments(g) {
+  // Collect padding information from parent nodes
+  let paddingByRank = {};
+  g.nodes().forEach(v => {
+    if (g.children(v).length) {
+      const node = g.node(v);
+      if (node && node.paddingTop && node.rank !== undefined) {
+        if (!paddingByRank[node.rank]) {
+          paddingByRank[node.rank] = 0;
+        }
+        paddingByRank[node.rank] = Math.max(paddingByRank[node.rank], node.paddingTop);
+      }
+    }
+  });
+  
+  // Apply padding adjustments to all nodes in subsequent ranks
+  let cumulativePadding = 0;
+  let maxRank = Math.max(...Object.keys(paddingByRank).map(Number));
+  
+  for (let rank = 0; rank <= maxRank; rank++) {
+    if (paddingByRank[rank]) {
+      cumulativePadding += paddingByRank[rank];
+    }
+    
+    // Adjust all nodes in this rank and subsequent ranks
+    g.nodes().forEach(v => {
+      const node = g.node(v);
+      if (node && node.rank !== undefined && node.rank >= rank) {
+        node.y += cumulativePadding;
+      }
+    });
+  }
+  
+  // Adjust parent node heights based on their padding
+  g.nodes().forEach(v => {
+    const node = g.node(v);
+    if (node && g.children(v).length && node.paddingTop) {
+      node.height += node.paddingTop;
+    }
   });
 }
 
@@ -498,18 +541,52 @@ function runLayout(g, time, opts) {
  * attributes can influence layout.
  */
 function updateInputGraph(inputGraph, layoutGraph) {
+  // First pass: copy all ranks from layout graph to input graph
   inputGraph.nodes().forEach(v => {
     let inputLabel = inputGraph.node(v);
     let layoutLabel = layoutGraph.node(v);
 
-    if (inputLabel) {
+    if (inputLabel && layoutLabel) {
       inputLabel.x = layoutLabel.x;
       inputLabel.y = layoutLabel.y;
       inputLabel.rank = layoutLabel.rank;
+      inputLabel.width = layoutLabel.width;
+      inputLabel.height = layoutLabel.height;
+    }
+  });
+  
+  // Second pass: assign ranks to parent nodes that don't have ranks
+  inputGraph.nodes().forEach(v => {
+    let inputLabel = inputGraph.node(v);
+    let layoutLabel = layoutGraph.node(v);
 
-      if (layoutGraph.children(v).length) {
-        inputLabel.width = layoutLabel.width;
-        inputLabel.height = layoutLabel.height;
+    // For parent nodes that exist in layout graph but don't have ranks,
+    // we need to find their rank by looking at their children's ranks
+    if (inputLabel && inputGraph.children(v).length && layoutLabel && layoutLabel.rank === undefined) {
+      let minChildRank = Infinity;
+      inputGraph.children(v).forEach(child => {
+        const childNode = inputGraph.node(child);
+        if (childNode && childNode.rank !== undefined && childNode.rank < minChildRank) {
+          minChildRank = childNode.rank;
+        }
+      });
+      if (minChildRank !== Infinity) {
+        inputLabel.rank = minChildRank;
+      }
+    }
+    
+    // For parent nodes that don't exist in layout graph, we need to find their rank
+    // by looking at their children's ranks
+    if (inputLabel && inputGraph.children(v).length && !layoutLabel) {
+      let minChildRank = Infinity;
+      inputGraph.children(v).forEach(child => {
+        const childNode = inputGraph.node(child);
+        if (childNode && childNode.rank !== undefined && childNode.rank < minChildRank) {
+          minChildRank = childNode.rank;
+        }
+      });
+      if (minChildRank !== Infinity) {
+        inputLabel.rank = minChildRank;
       }
     }
   });
@@ -532,7 +609,7 @@ function updateInputGraph(inputGraph, layoutGraph) {
 let graphNumAttrs = ["nodesep", "edgesep", "ranksep", "marginx", "marginy"];
 let graphDefaults = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "tb" };
 let graphAttrs = ["acyclicer", "ranker", "rankdir", "align"];
-let nodeNumAttrs = ["width", "height", "rank"];
+let nodeNumAttrs = ["width", "height", "rank", "paddingTop"];
 let nodeDefaults = { width: 0, height: 0 };
 let edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset"];
 let edgeDefaults = {
@@ -2188,6 +2265,7 @@ function positionY(g) {
   let layering = util.buildLayerMatrix(g);
   let rankSep = g.graph().ranksep;
   let prevY = 0;
+  
   layering.forEach(layer => {
     const maxHeight = layer.reduce((acc, v) => {
       const height = g.node(v).height;
@@ -2197,8 +2275,18 @@ function positionY(g) {
         return height;
       }
     }, 0);
+    
+    // Calculate padding for this layer
+    let layerPadding = 0;
+    layer.forEach(v => {
+      const node = g.node(v);
+      if (node.paddingTop) {
+        layerPadding = Math.max(layerPadding, node.paddingTop);
+      }
+    });
+    
     layer.forEach(v => g.node(v).y = prevY + maxHeight / 2);
-    prevY += maxHeight + rankSep;
+    prevY += maxHeight + rankSep + layerPadding; // Add padding to next layer
   });
 }
 
@@ -2996,7 +3084,7 @@ function zipObject(props, values) {
 }
 
 },{"@dagrejs/graphlib":29}],28:[function(require,module,exports){
-module.exports = "1.1.5";
+module.exports = "1.1.6-pre";
 
 },{}],29:[function(require,module,exports){
 /**
