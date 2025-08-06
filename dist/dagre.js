@@ -458,6 +458,7 @@ function layout(g, opts) {
       time("  buildLayoutGraph", () => buildLayoutGraph(g));
     time("  runLayout",        () => runLayout(layoutGraph, time, opts));
     time("  updateInputGraph", () => updateInputGraph(g, layoutGraph));
+    time("  applyPhantomPadding", () => applyPhantomPadding(g));
   });
 }
 
@@ -503,13 +504,30 @@ function updateInputGraph(inputGraph, layoutGraph) {
     let layoutLabel = layoutGraph.node(v);
 
     if (inputLabel) {
-      inputLabel.x = layoutLabel.x;
-      inputLabel.y = layoutLabel.y;
-      inputLabel.rank = layoutLabel.rank;
+      if (layoutLabel) {
+        // Node exists in layout graph
+        inputLabel.x = layoutLabel.x;
+        inputLabel.y = layoutLabel.y;
+        inputLabel.rank = layoutLabel.rank;
 
-      if (layoutGraph.children(v).length) {
-        inputLabel.width = layoutLabel.width;
-        inputLabel.height = layoutLabel.height;
+        if (layoutGraph.children(v).length) {
+          inputLabel.width = layoutLabel.width;
+          inputLabel.height = layoutLabel.height;
+        }
+      } else {
+        // Node doesn't exist in layout graph (e.g., parent nodes)
+        // We need to calculate rank based on children
+        const children = inputGraph.children(v);
+        if (children.length > 0) {
+          const childRanks = children.map(child => {
+            const childNode = inputGraph.node(child);
+            return childNode && childNode.rank !== undefined ? childNode.rank : undefined;
+          }).filter(rank => rank !== undefined);
+          
+          if (childRanks.length > 0) {
+            inputLabel.rank = Math.min(...childRanks);
+          }
+        }
       }
     }
   });
@@ -532,7 +550,7 @@ function updateInputGraph(inputGraph, layoutGraph) {
 let graphNumAttrs = ["nodesep", "edgesep", "ranksep", "marginx", "marginy"];
 let graphDefaults = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "tb" };
 let graphAttrs = ["acyclicer", "ranker", "rankdir", "align"];
-let nodeNumAttrs = ["width", "height", "rank"];
+let nodeNumAttrs = ["width", "height", "rank", "paddingTop"];
 let nodeDefaults = { width: 0, height: 0 };
 let edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset"];
 let edgeDefaults = {
@@ -618,6 +636,43 @@ function injectEdgeLabelProxies(g) {
       let w = g.node(e.w);
       let label = { rank: (w.rank - v.rank) / 2 + v.rank, e: e };
       util.addDummyNode(g, "edge-proxy", label, "_ep");
+    }
+  });
+}
+
+function applyPhantomPadding(g) {
+  // Find all parent nodes with paddingTop
+  const parentsWithPadding = [];
+  g.nodes().forEach(v => {
+    const node = g.node(v);
+    if (g.children(v).length && node && node.paddingTop) {
+      parentsWithPadding.push({ id: v, node: node });
+    }
+  });
+
+  // Apply padding by adjusting Y coordinates and heights
+  parentsWithPadding.forEach(({ id, node: parentNode }) => {
+    const children = g.children(id);
+    if (children.length === 0) return;
+
+    // Get the span of the parent
+    const childRanks = children.map(child => g.node(child).rank).filter(rank => rank !== undefined);
+    if (childRanks.length === 0) return;
+
+    const minRank = Math.min(...childRanks);
+
+    // Push down all nodes in ranks >= minRank
+    g.nodes().forEach(v => {
+      const node = g.node(v);
+      if (node && node.rank !== undefined && node.rank >= minRank && parentNode && parentNode.paddingTop > 0) {
+        node.y += parentNode.paddingTop;
+      }
+    });
+
+    // Increase parent height
+    const parentNodeInGraph = g.node(id);
+    if (parentNodeInGraph && parentNode && parentNode.paddingTop > 0) {
+      parentNodeInGraph.height += parentNode.paddingTop;
     }
   });
 }
@@ -1556,7 +1611,7 @@ function sortSubgraph(g, v, cg, biasRight) {
   let entries = resolveConflicts(barycenters, cg);
   expandSubgraphs(entries, subgraphs);
 
-  let result = sort(entries, biasRight);
+  let result = sort(entries, biasRight, g);
 
   if (bl) {
     result.vs = [bl, result.vs, br].flat(true);
@@ -1604,7 +1659,7 @@ let util = require("../util");
 
 module.exports = sort;
 
-function sort(entries, biasRight) {
+function sort(entries, biasRight, g) {
   let parts = util.partition(entries, entry => {
     return Object.hasOwn(entry, "barycenter");
   });
@@ -1615,7 +1670,27 @@ function sort(entries, biasRight) {
     weight = 0,
     vsIndex = 0;
 
-  sortable.sort(compareWithBias(!!biasRight));
+  // Sort phantom nodes to the top
+  sortable.sort((a, b) => {
+    // Handle case where graph is not provided (for backward compatibility)
+    if (!g) {
+      return compareWithBias(!!biasRight)(a, b);
+    }
+    
+    const aPhantom = a.vs.some(vId => {
+      const node = g.node(vId);
+      return node && node.phantom;
+    });
+    const bPhantom = b.vs.some(vId => {
+      const node = g.node(vId);
+      return node && node.phantom;
+    });
+    
+    if (aPhantom && !bPhantom) return -1;
+    if (!aPhantom && bPhantom) return 1;
+    
+    return compareWithBias(!!biasRight)(a, b);
+  });
 
   vsIndex = consumeUnsortable(vs, unsortable, vsIndex);
 
@@ -2996,7 +3071,7 @@ function zipObject(props, values) {
 }
 
 },{"@dagrejs/graphlib":29}],28:[function(require,module,exports){
-module.exports = "1.1.5";
+module.exports = "1.1.6-pre";
 
 },{}],29:[function(require,module,exports){
 /**

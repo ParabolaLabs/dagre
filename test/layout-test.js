@@ -246,6 +246,74 @@ describe("layout", () => {
     expect(g.graph().height).equals(50);
   });
 
+  it("supports paddingTop for parent nodes using phantom nodes", () => {
+    g.setNode("parent1", { paddingTop: 30 });
+    g.setNode("parent2", { paddingTop: 0 });
+    g.setNode("child1", { width: 50, height: 50 });
+    g.setNode("child2", { width: 50, height: 50 });
+    g.setParent("child1", "parent1");
+    g.setParent("child2", "parent2");
+    
+    layout(g);
+    
+    // Parent with padding should be taller
+    expect(g.node("parent1").height).to.be.gt(g.node("parent2").height);
+    
+    // Children should be pushed down by padding
+    expect(g.node("child1").y).to.be.gt(50);
+    expect(g.node("child2").y).to.be.gt(50);
+  });
+
+  it("handles multiple parents with different padding", () => {
+    g.setNode("parent1", { paddingTop: 30 });
+    g.setNode("parent2", { paddingTop: 10 });
+    g.setNode("child1", { width: 50, height: 50 });
+    g.setNode("child2", { width: 50, height: 50 });
+    g.setParent("child1", "parent1");
+    g.setParent("child2", "parent2");
+    
+    layout(g);
+    
+    // Both parents should have increased height
+    expect(g.node("parent1").height).to.be.gt(50);
+    expect(g.node("parent2").height).to.be.gt(50);
+    
+    // Children should be pushed down
+    expect(g.node("child1").y).to.be.gt(50);
+    expect(g.node("child2").y).to.be.gt(50);
+  });
+
+  it("works with nested subgraphs", () => {
+    g.setNode("outer", { paddingTop: 20 });
+    g.setNode("inner", { paddingTop: 10 });
+    g.setNode("child", { width: 50, height: 50 });
+    g.setParent("inner", "outer");
+    g.setParent("child", "inner");
+    
+    layout(g);
+    
+    // Both parents should have increased height
+    expect(g.node("outer").height).to.be.gt(50);
+    expect(g.node("inner").height).to.be.gt(50);
+    
+    // Child should be pushed down
+    expect(g.node("child").y).to.be.gt(50);
+  });
+
+  it("handles zero padding correctly", () => {
+    g.setNode("parent1", { paddingTop: 0 });
+    g.setNode("parent2", { paddingTop: 0 });
+    g.setNode("child1", { width: 50, height: 50 });
+    g.setNode("child2", { width: 50, height: 50 });
+    g.setParent("child1", "parent1");
+    g.setParent("child2", "parent2");
+    
+    layout(g);
+    
+    // Should behave like no padding
+    expect(g.node("parent1").height).to.equal(g.node("parent2").height);
+  });
+
   describe("ensures all coordinates are in the bounding box for the graph", () => {
     ["TB", "BT", "LR", "RL"].forEach(rankdir => {
       describe(rankdir, () => {
