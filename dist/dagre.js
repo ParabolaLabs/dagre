@@ -467,6 +467,7 @@ function runLayout(g, time, opts) {
   time("    acyclic",                () => acyclic.run(g));
   time("    nestingGraph.run",       () => nestingGraph.run(g));
   time("    rank",                   () => rank(util.asNonCompoundGraph(g)));
+  time("    addParentPadding",       () => addParentPadding(g));
   time("    injectEdgeLabelProxies", () => injectEdgeLabelProxies(g));
   time("    removeEmptyRanks",       () => removeEmptyRanks(g));
   time("    nestingGraph.cleanup",   () => nestingGraph.cleanup(g));
@@ -480,6 +481,7 @@ function runLayout(g, time, opts) {
   time("    insertSelfEdges",        () => insertSelfEdges(g));
   time("    adjustCoordinateSystem", () => coordinateSystem.adjust(g));
   time("    position",               () => position(g));
+  time("    removeParentPadding",    () => removeParentPadding(g));
   time("    positionSelfEdges",      () => positionSelfEdges(g));
   time("    removeBorderNodes",      () => removeBorderNodes(g));
   time("    normalize.undo",         () => normalize.undo(g));
@@ -502,7 +504,12 @@ function updateInputGraph(inputGraph, layoutGraph) {
     let inputLabel = inputGraph.node(v);
     let layoutLabel = layoutGraph.node(v);
 
-    if (inputLabel) {
+    if (inputLabel && layoutLabel) {
+      // Skip phantom padding nodes
+      if (layoutLabel.dummy === "parent-padding") {
+        return;
+      }
+      
       inputLabel.x = layoutLabel.x;
       inputLabel.y = layoutLabel.y;
       inputLabel.rank = layoutLabel.rank;
@@ -518,10 +525,12 @@ function updateInputGraph(inputGraph, layoutGraph) {
     let inputLabel = inputGraph.edge(e);
     let layoutLabel = layoutGraph.edge(e);
 
-    inputLabel.points = layoutLabel.points;
-    if (Object.hasOwn(layoutLabel, "x")) {
-      inputLabel.x = layoutLabel.x;
-      inputLabel.y = layoutLabel.y;
+    if (inputLabel && layoutLabel) {
+      inputLabel.points = layoutLabel.points;
+      if (Object.hasOwn(layoutLabel, "x")) {
+        inputLabel.x = layoutLabel.x;
+        inputLabel.y = layoutLabel.y;
+      }
     }
   });
 
@@ -540,6 +549,69 @@ let edgeDefaults = {
   labeloffset: 10, labelpos: "r"
 };
 let edgeAttrs = ["labelpos"];
+
+/*
+ * Adds phantom nodes for parent padding to create space above child nodes
+ * within compound graphs. This allows for text or other content to be
+ * placed above the child nodes within the parent boundaries.
+ */
+function addParentPadding(g) {
+  let phantomNodes = [];
+  let paddingHeight = g.graph().parentPaddingHeight || 20; // Configurable padding height
+  
+  g.nodes().forEach(v => {
+    if (g.children(v).length > 0) {
+      // This is a parent node
+      let children = g.children(v);
+      let childNodes = children.map(c => g.node(c)).filter(n => n && n.rank !== undefined);
+      
+      if (childNodes.length === 0) return;
+      
+      let minRank = Math.min(...childNodes.map(n => n.rank));
+      
+      // Create a single phantom node for each parent at the minimum rank of its children
+      let phantomId = `_padding_${v}`;
+      let phantomNode = {
+        width: 0,
+        height: paddingHeight,
+        dummy: "parent-padding",
+        parentNode: v,
+        paddingIndex: 0,
+        rank: minRank
+      };
+      
+      g.setNode(phantomId, phantomNode);
+      g.setParent(phantomId, v);
+      phantomNodes.push(phantomId);
+    }
+  });
+  
+  g.graph().phantomPaddingNodes = phantomNodes;
+}
+
+/*
+ * Removes phantom padding nodes and adjusts parent node heights
+ * to account for the removed padding space.
+ */
+function removeParentPadding(g) {
+  let phantomNodes = g.graph().phantomPaddingNodes || [];
+  
+  phantomNodes.forEach(phantomId => {
+    let phantomNode = g.node(phantomId);
+    if (phantomNode) {
+      let parentNode = g.node(phantomNode.parentNode);
+      
+      // Adjust parent height to account for padding
+      if (parentNode) {
+        parentNode.height += phantomNode.height;
+      }
+      
+      g.removeNode(phantomId);
+    }
+  });
+  
+  delete g.graph().phantomPaddingNodes;
+}
 
 /*
  * Constructs a new graph from the input graph, which can be used for layout.
@@ -1532,7 +1604,7 @@ let sort = require("./sort");
 module.exports = sortSubgraph;
 
 function sortSubgraph(g, v, cg, biasRight) {
-  let movable = g.children(v);
+  let movable = g.children(v) || [];
   let node = g.node(v);
   let bl = node ? node.borderLeft : undefined;
   let br = node ? node.borderRight: undefined;
@@ -1542,7 +1614,22 @@ function sortSubgraph(g, v, cg, biasRight) {
     movable = movable.filter(w => w !== bl && w !== br);
   }
 
-  let barycenters = barycenter(g, movable);
+  // Filter out phantom padding nodes from movable list for barycenter calculation
+  let phantomPaddingNodes = movable.filter(w => {
+    let childNode = g.node(w);
+    return childNode && childNode.dummy === "parent-padding";
+  }).sort((a, b) => {
+    let nodeA = g.node(a);
+    let nodeB = g.node(b);
+    return (nodeA.paddingIndex || 0) - (nodeB.paddingIndex || 0);
+  });
+
+  let regularMovable = movable.filter(w => {
+    let childNode = g.node(w);
+    return !childNode || !childNode.dummy || childNode.dummy !== "parent-padding";
+  });
+
+  let barycenters = barycenter(g, regularMovable);
   barycenters.forEach(entry => {
     if (g.children(entry.v).length) {
       let subgraphResult = sortSubgraph(g, entry.v, cg, biasRight);
@@ -1557,6 +1644,11 @@ function sortSubgraph(g, v, cg, biasRight) {
   expandSubgraphs(entries, subgraphs);
 
   let result = sort(entries, biasRight);
+
+  // Insert phantom padding nodes at the top of the result
+  if (phantomPaddingNodes.length > 0) {
+    result.vs = [phantomPaddingNodes, result.vs].flat(true);
+  }
 
   if (bl) {
     result.vs = [bl, result.vs, br].flat(true);
@@ -2996,7 +3088,7 @@ function zipObject(props, values) {
 }
 
 },{"@dagrejs/graphlib":29}],28:[function(require,module,exports){
-module.exports = "1.1.5";
+module.exports = "1.1.6-pre";
 
 },{}],29:[function(require,module,exports){
 /**

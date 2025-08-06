@@ -287,6 +287,84 @@ describe("layout", () => {
       b: { x: 50 + 200 + 75 / 2, y: 200 / 2 }
     });
   });
+
+  it("can layout a compound graph with parent padding", () => {
+    g.setNode("a", { width: 50, height: 100 });
+    g.setNode("b", { width: 75, height: 200 });
+    g.setNode("c", { width: 60, height: 150 });
+    g.setNode("parent", { width: 200, height: 300 });
+    
+    g.setParent("a", "parent");
+    g.setParent("b", "parent");
+    g.setParent("c", "parent");
+    
+    g.setEdge("a", "b");
+    g.setEdge("b", "c");
+    
+    layout(g);
+    
+    // Verify that all nodes have coordinates
+    expect(g.node("a")).to.have.property("x");
+    expect(g.node("a")).to.have.property("y");
+    expect(g.node("b")).to.have.property("x");
+    expect(g.node("b")).to.have.property("y");
+    expect(g.node("c")).to.have.property("x");
+    expect(g.node("c")).to.have.property("y");
+    expect(g.node("parent")).to.have.property("x");
+    expect(g.node("parent")).to.have.property("y");
+    
+    // Verify that parent height has been adjusted to account for padding
+    expect(g.node("parent").height).to.be.greaterThan(300);
+    
+    // Verify that phantom padding nodes are not in the final graph
+    g.nodes().forEach(v => {
+      let node = g.node(v);
+      expect(node.dummy).to.not.equal("parent-padding");
+    });
+  });
+
+  it("can layout a nested compound graph with parent padding", () => {
+    g.setNode("a", { width: 50, height: 100 });
+    g.setNode("b", { width: 75, height: 200 });
+    g.setNode("inner", { width: 150, height: 250 });
+    g.setNode("outer", { width: 300, height: 400 });
+    
+    g.setParent("a", "inner");
+    g.setParent("b", "inner");
+    g.setParent("inner", "outer");
+    
+    g.setEdge("a", "b");
+    
+    layout(g);
+    
+    // Verify that all nodes have coordinates
+    expect(g.node("a")).to.have.property("x");
+    expect(g.node("a")).to.have.property("y");
+    expect(g.node("b")).to.have.property("x");
+    expect(g.node("b")).to.have.property("y");
+    expect(g.node("inner")).to.have.property("x");
+    expect(g.node("inner")).to.have.property("y");
+    expect(g.node("outer")).to.have.property("x");
+    expect(g.node("outer")).to.have.property("y");
+    
+    // Verify that parent heights have been adjusted
+    expect(g.node("inner").height).to.be.greaterThan(250);
+    expect(g.node("outer").height).to.be.greaterThan(400);
+  });
+
+  it("does not add padding to graphs without compound nodes", () => {
+    g.setNode("a", { width: 50, height: 100 });
+    g.setNode("b", { width: 75, height: 200 });
+    g.setEdge("a", "b");
+    
+    layout(g);
+    
+    // Verify that no phantom padding nodes were created
+    g.nodes().forEach(v => {
+      let node = g.node(v);
+      expect(node.dummy).to.not.equal("parent-padding");
+    });
+  });
 });
 
 function extractCoordinates(g) {
