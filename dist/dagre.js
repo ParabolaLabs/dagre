@@ -532,8 +532,8 @@ function updateInputGraph(inputGraph, layoutGraph) {
 let graphNumAttrs = ["nodesep", "edgesep", "ranksep", "marginx", "marginy"];
 let graphDefaults = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "tb" };
 let graphAttrs = ["acyclicer", "ranker", "rankdir", "align"];
-let nodeNumAttrs = ["width", "height", "rank"];
-let nodeDefaults = { width: 0, height: 0 };
+let nodeNumAttrs = ["width", "height", "rank", "marginTop", "marginBottom", "marginLeft", "marginRight"];
+let nodeDefaults = { width: 0, height: 0, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0 };
 let edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset"];
 let edgeDefaults = {
   minlen: 1, weight: 1, width: 0, height: 0,
@@ -2134,6 +2134,8 @@ function sep(nodeSep, edgeSep, reverseSep) {
     let sum = 0;
     let delta;
 
+    // Add left margin of first node
+    sum += (vLabel.marginLeft || 0);
     sum += vLabel.width / 2;
     if (Object.hasOwn(vLabel, "labelpos")) {
       switch (vLabel.labelpos.toLowerCase()) {
@@ -2150,6 +2152,8 @@ function sep(nodeSep, edgeSep, reverseSep) {
     sum += (wLabel.dummy ? edgeSep : nodeSep) / 2;
 
     sum += wLabel.width / 2;
+    // Add right margin of second node
+    sum += (wLabel.marginRight || 0);
     if (Object.hasOwn(wLabel, "labelpos")) {
       switch (wLabel.labelpos.toLowerCase()) {
       case "l": delta = wLabel.width / 2; break;
@@ -2166,7 +2170,8 @@ function sep(nodeSep, edgeSep, reverseSep) {
 }
 
 function width(g, v) {
-  return g.node(v).width;
+  const node = g.node(v);
+  return node.width + (node.marginLeft || 0) + (node.marginRight || 0);
 }
 
 },{"../util":27,"@dagrejs/graphlib":29}],22:[function(require,module,exports){
@@ -2190,14 +2195,19 @@ function positionY(g) {
   let prevY = 0;
   layering.forEach(layer => {
     const maxHeight = layer.reduce((acc, v) => {
-      const height = g.node(v).height;
+      const node = g.node(v);
+      const height = node.height + (node.marginTop || 0) + (node.marginBottom || 0);
       if (acc > height) {
         return acc;
       } else {
         return height;
       }
     }, 0);
-    layer.forEach(v => g.node(v).y = prevY + maxHeight / 2);
+    layer.forEach(v => {
+      // const node = g.node(v);
+      // const nodeHeight = node.height + (node.marginTop || 0) + (node.marginBottom || 0);
+      g.node(v).y = prevY + maxHeight / 2;
+    });
     prevY += maxHeight + rankSep;
   });
 }
@@ -2996,7 +3006,7 @@ function zipObject(props, values) {
 }
 
 },{"@dagrejs/graphlib":29}],28:[function(require,module,exports){
-module.exports = "1.1.5";
+module.exports = "1.1.6-pre";
 
 },{}],29:[function(require,module,exports){
 /**
