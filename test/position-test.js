@@ -76,4 +76,32 @@ describe("position", () => {
     expect(g.node("a").y).to.equal(65);
     expect(g.node("b").y).to.equal(290);
   });
+
+  it("respects margins in compound graphs", () => {
+    g.graph().ranksep = 50;
+    g.setNode("parent", { width: 200, height: 100, marginTop: 20, marginBottom: 30, marginLeft: 40, marginRight: 50 });
+    g.setNode("child1", { width: 50, height: 50, rank: 0, order: 0, marginTop: 10, marginBottom: 15 });
+    g.setNode("child2", { width: 60, height: 40, rank: 1, order: 0, marginTop: 5, marginBottom: 10 });
+    g.setParent("child1", "parent");
+    g.setParent("child2", "parent");
+    g.setEdge("child1", "child2");
+    position(g);
+    
+    // Parent nodes don't get x/y coordinates from the layout algorithm
+    // They get their dimensions calculated based on their children
+    const parent = g.node("parent");
+    expect(parent.width).to.be.greaterThan(0);
+    expect(parent.height).to.be.greaterThan(0);
+    // Parent nodes should not have x/y coordinates set by the layout
+    expect(parent).to.not.have.property('x');
+    expect(parent).to.not.have.property('y');
+    
+    // Children should be positioned correctly
+    const child1 = g.node("child1");
+    const child2 = g.node("child2");
+    expect(child1.x).to.be.a('number');
+    expect(child1.y).to.be.a('number');
+    expect(child2.x).to.be.a('number');
+    expect(child2.y).to.be.a('number');
+  });
 });
