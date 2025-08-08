@@ -98,10 +98,10 @@ declare module '@dagrejs/dagre' {
   export interface NodeConfig {
     width?: number | undefined;
     height?: number | undefined;
-    marginTop?: number | undefined;
-    marginBottom?: number | undefined;
-    marginLeft?: number | undefined;
-    marginRight?: number | undefined;
+    margintop?: number | undefined;
+    marginbottom?: number | undefined;
+    marginleft?: number | undefined;
+    marginright?: number | undefined;
   }
 
   export interface EdgeConfig {
@@ -147,9 +147,9 @@ declare module '@dagrejs/dagre' {
     rx?: number | undefined;
     ry?: number | undefined;
     shape?: string | undefined;
-    marginTop?: number | undefined;
-    marginBottom?: number | undefined;
-    marginLeft?: number | undefined;
-    marginRight?: number | undefined;
+    margintop?: number | undefined;
+    marginbottom?: number | undefined;
+    marginleft?: number | undefined;
+    marginright?: number | undefined;
   };
 }

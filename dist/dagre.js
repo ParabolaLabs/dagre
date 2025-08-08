@@ -532,11 +532,11 @@ function updateInputGraph(inputGraph, layoutGraph) {
 let graphNumAttrs = ["nodesep", "edgesep", "ranksep", "marginx", "marginy"];
 let graphDefaults = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "tb" };
 let graphAttrs = ["acyclicer", "ranker", "rankdir", "align"];
-let nodeNumAttrs = ["width", "height", "rank", "marginTop", "marginBottom", "marginLeft", "marginRight"];
-let nodeDefaults = { width: 0, height: 0, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0 };
-let edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset", "marginLeft", "marginRight", "marginTop", "marginBottom"];
+let nodeNumAttrs = ["width", "height", "rank", "margintop", "marginbottom", "marginleft", "marginright"];
+let nodeDefaults = { width: 0, height: 0, margintop: 0, marginbottom: 0, marginleft: 0, marginright: 0 };
+let edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset", "marginleft", "marginright", "margintop", "marginbottom"];
 let edgeDefaults = {
-  minlen: 1, weight: 1, width: 0, height: 0, marginLeft: 0, marginRight: 0, marginTop: 0, marginBottom: 0,
+  minlen: 1, weight: 1, width: 0, height: 0, marginleft: 0, marginright: 0, margintop: 0, marginbottom: 0,
   labeloffset: 10, labelpos: "r"
 };
 let edgeAttrs = ["labelpos"];
@@ -753,13 +753,13 @@ function removeBorderNodes(g) {
       let baseHeight = Math.abs(b.y - t.y);
       
       // Add parent node's own margins to the calculated dimensions
-      let marginLeft = node.marginLeft || 0;
-      let marginRight = node.marginRight || 0;
-      let marginTop = node.marginTop || 0;
-      let marginBottom = node.marginBottom || 0;
+      let marginleft = node.marginleft || 0;
+      let marginright = node.marginright || 0;
+      let margintop = node.margintop || 0;
+      let marginbottom = node.marginbottom || 0;
 
-      node.width = baseWidth + marginLeft + marginRight;
-      node.height = baseHeight + marginTop + marginBottom;
+      node.width = baseWidth + marginleft + marginright;
+      node.height = baseHeight + margintop + marginbottom;
       node.x = l.x + baseWidth / 2;
       node.y = t.y + baseHeight / 2;
     }
@@ -839,6 +839,10 @@ function canonicalize(attrs) {
   var newAttrs = {};
   if (attrs) {
     Object.entries(attrs).forEach(([k, v]) => {
+      if (typeof k === "string") {
+        k = k.toLowerCase();
+      }
+
       newAttrs[k] = v;
     });
   }
@@ -2141,7 +2145,7 @@ function sep(nodeSep, edgeSep, reverseSep) {
     let delta;
 
     // Add left margin of first node
-    sum += (vLabel.marginLeft || 0);
+    sum += (vLabel.marginleft || 0);
     sum += vLabel.width / 2;
     if (Object.hasOwn(vLabel, "labelpos")) {
       switch (vLabel.labelpos.toLowerCase()) {
@@ -2159,7 +2163,7 @@ function sep(nodeSep, edgeSep, reverseSep) {
 
     sum += wLabel.width / 2;
     // Add right margin of second node
-    sum += (wLabel.marginRight || 0);
+    sum += (wLabel.marginright || 0);
     if (Object.hasOwn(wLabel, "labelpos")) {
       switch (wLabel.labelpos.toLowerCase()) {
       case "l": delta = wLabel.width / 2; break;
@@ -2177,7 +2181,7 @@ function sep(nodeSep, edgeSep, reverseSep) {
 
 function width(g, v) {
   const node = g.node(v);
-  return node.width + (node.marginLeft || 0) + (node.marginRight || 0);
+  return node.width + (node.marginleft || 0) + (node.marginright || 0);
 }
 
 },{"../util":27,"@dagrejs/graphlib":29}],22:[function(require,module,exports){
@@ -2202,7 +2206,7 @@ function positionY(g) {
   layering.forEach(layer => {
     const maxHeight = layer.reduce((acc, v) => {
       const node = g.node(v);
-      const height = node.height + (node.marginTop || 0) + (node.marginBottom || 0);
+      const height = node.height + (node.margintop || 0) + (node.marginbottom || 0);
       if (acc > height) {
         return acc;
       } else {
@@ -2211,7 +2215,7 @@ function positionY(g) {
     }, 0);
     layer.forEach(v => {
       // const node = g.node(v);
-      // const nodeHeight = node.height + (node.marginTop || 0) + (node.marginBottom || 0);
+      // const nodeHeight = node.height + (node.margintop || 0) + (node.marginbottom || 0);
       g.node(v).y = prevY + maxHeight / 2;
     });
     prevY += maxHeight + rankSep;

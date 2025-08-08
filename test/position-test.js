@@ -54,18 +54,18 @@ describe("position", () => {
 
   it("respects individual node margins", () => {
     g.graph().nodesep = 50;
-    g.setNode("a", { width: 50, height: 100, rank: 0, order: 0, marginLeft: 10, marginRight: 20 });
-    g.setNode("b", { width: 70, height: 80, rank: 0, order: 1, marginLeft: 15, marginRight: 25 });
+    g.setNode("a", { width: 50, height: 100, rank: 0, order: 0, marginleft: 10, marginright: 20 });
+    g.setNode("b", { width: 70, height: 80, rank: 0, order: 1, marginleft: 15, marginright: 25 });
     position(g);
-    // Expected: a.x + a.width/2 + a.marginRight + nodesep + b.marginLeft + b.width/2 = b.x
+    // Expected: a.x + a.width/2 + a.marginright + nodesep + b.marginleft + b.width/2 = b.x
     const expectedSeparation = 50/2 + 20 + 50 + 15 + 70/2;
     expect(g.node("b").x).to.equal(g.node("a").x + expectedSeparation);
   });
 
   it("respects vertical margins in layer height calculation", () => {
     g.graph().ranksep = 100;
-    g.setNode("a", { width: 50, height: 100, rank: 0, order: 0, marginTop: 10, marginBottom: 20 });
-    g.setNode("b", { width: 50, height: 80, rank: 1, order: 0, marginTop: 15, marginBottom: 25 });
+    g.setNode("a", { width: 50, height: 100, rank: 0, order: 0, margintop: 10, marginbottom: 20 });
+    g.setNode("b", { width: 50, height: 80, rank: 1, order: 0, margintop: 15, marginbottom: 25 });
     g.setEdge("a", "b");
     position(g);
     // Layer 0 height should be 100 + 10 + 20 = 130
@@ -79,9 +79,9 @@ describe("position", () => {
 
   it("respects margins in compound graphs", () => {
     g.graph().ranksep = 50;
-    g.setNode("parent", { width: 200, height: 100, marginTop: 20, marginBottom: 30, marginLeft: 40, marginRight: 50 });
-    g.setNode("child1", { width: 50, height: 50, rank: 0, order: 0, marginTop: 10, marginBottom: 15 });
-    g.setNode("child2", { width: 60, height: 40, rank: 1, order: 0, marginTop: 5, marginBottom: 10 });
+    g.setNode("parent", { width: 200, height: 100, margintop: 20, marginbottom: 30, marginleft: 40, marginright: 50 });
+    g.setNode("child1", { width: 50, height: 50, rank: 0, order: 0, margintop: 10, marginbottom: 15 });
+    g.setNode("child2", { width: 60, height: 40, rank: 1, order: 0, margintop: 5, marginbottom: 10 });
     g.setParent("child1", "parent");
     g.setParent("child2", "parent");
     g.setEdge("child1", "child2");

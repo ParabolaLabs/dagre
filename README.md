@@ -60,16 +60,16 @@ You can specify individual margins for each node to control spacing more precise
 g.setNode("a", { 
   width: 100, 
   height: 50,
-  marginTop: 10,    // Top margin
-  marginBottom: 15, // Bottom margin  
-  marginLeft: 20,   // Left margin
-  marginRight: 25   // Right margin
+  margintop: 10,    // Top margin
+  marginbottom: 15, // Bottom margin  
+  marginleft: 20,   // Left margin
+  marginright: 25   // Right margin
 });
 ```
 
 The margins are added to the effective size of the node for layout calculations:
-- **Horizontal margins** (`marginLeft`, `marginRight`) affect node separation and X positioning
-- **Vertical margins** (`marginTop`, `marginBottom`) affect layer height and Y positioning
+- **Horizontal margins** (`marginleft`, `marginright`) affect node separation and X positioning
+- **Vertical margins** (`margintop`, `marginbottom`) affect layer height and Y positioning
 
 ## Configuration
 
@@ -92,10 +92,10 @@ g.setGraph({
 g.setNode("id", {
   width: 100,        // Node width
   height: 50,        // Node height
-  marginTop: 10,     // Top margin
-  marginBottom: 15,  // Bottom margin
-  marginLeft: 20,    // Left margin  
-  marginRight: 25    // Right margin
+  margintop: 10,     // Top margin
+  marginbottom: 15,  // Bottom margin
+  marginleft: 20,    // Left margin  
+  marginright: 25    // Right margin
 });
 ```
 

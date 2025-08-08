@@ -62,6 +62,58 @@ describe("layout", () => {
     expect(g.edge("a", "b").y).eqls(100  + 150 + 70 / 2 );
   });
 
+  // NEW TESTS BELOW
+  it("respects individual node margins in full layout (horizontal)", () => {
+    g.graph().nodesep = 50;
+    g.setNode("a", { width: 50, height: 100, marginleft: 10, marginright: 20 });
+    g.setNode("b", { width: 70, height:  80, marginleft: 15, marginright: 25 });
+    layout(g);
+    const ax = g.node("a").x;
+    const bx = g.node("b").x;
+    const expectedDx = 50/2 + 20 + 50 + 15 + 70/2; // a.w/2 + a.mR + nodesep + b.mL + b.w/2
+    expect(bx - ax).to.equal(expectedDx);
+  });
+
+  it("respects vertical node margins in full layout (vertical)", () => {
+    g.graph().ranksep = 100;
+    g.setNode("a", { width: 50, height: 100, margintop: 10, marginbottom: 20 });
+    g.setNode("b", { width: 50, height:  80, margintop: 15, marginbottom: 25 });
+    g.setEdge("a", "b");
+    layout(g);
+    const ay = g.node("a").y;
+    const by = g.node("b").y;
+    const effA = 100 + 10 + 20;
+    const effB = 80 + 15 + 25;
+    const expectedDy = effA / 2 + 100 + effB / 2;
+    expect(by - ay).to.equal(expectedDy);
+  });
+
+  it("applies margins for parent nodes in compound graphs (full layout)", () => {
+    g.graph().ranksep = 50;
+    g.setNode("parent", { width: 200, height: 100, margintop: 20, marginbottom: 30, marginleft: 40, marginright: 50 });
+    g.setNode("child1", { width: 50, height: 50, margintop: 10, marginbottom: 15 });
+    g.setNode("child2", { width: 60, height: 40, margintop: 5,  marginbottom: 10 });
+    g.setParent("child1", "parent");
+    g.setParent("child2", "parent");
+    g.setEdge("child1", "child2");
+
+    layout(g);
+
+    const parent = g.node("parent");
+    // Parent should have x,y in full layout and dimensions should include its own margins
+    expect(parent.x).to.be.a("number");
+    expect(parent.y).to.be.a("number");
+    expect(parent.width).to.be.greaterThan(0);
+    expect(parent.height).to.be.greaterThan(0);
+
+    const c1 = g.node("child1");
+    const c2 = g.node("child2");
+    expect(c1.x).to.be.a("number");
+    expect(c1.y).to.be.a("number");
+    expect(c2.x).to.be.a("number");
+    expect(c2.y).to.be.a("number");
+  });
+
   describe("can layout an edge with a long label, with rankdir =", () => {
     ["TB", "BT", "LR", "RL"].forEach(rankdir => {
       it(rankdir, () => {
