@@ -534,9 +534,9 @@ let graphDefaults = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "tb" };
 let graphAttrs = ["acyclicer", "ranker", "rankdir", "align"];
 let nodeNumAttrs = ["width", "height", "rank", "marginTop", "marginBottom", "marginLeft", "marginRight"];
 let nodeDefaults = { width: 0, height: 0, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0 };
-let edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset"];
+let edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset", "marginLeft", "marginRight", "marginTop", "marginBottom"];
 let edgeDefaults = {
-  minlen: 1, weight: 1, width: 0, height: 0,
+  minlen: 1, weight: 1, width: 0, height: 0, marginLeft: 0, marginRight: 0, marginTop: 0, marginBottom: 0,
   labeloffset: 10, labelpos: "r"
 };
 let edgeAttrs = ["labelpos"];
@@ -757,7 +757,7 @@ function removeBorderNodes(g) {
       let marginRight = node.marginRight || 0;
       let marginTop = node.marginTop || 0;
       let marginBottom = node.marginBottom || 0;
-      
+
       node.width = baseWidth + marginLeft + marginRight;
       node.height = baseHeight + marginTop + marginBottom;
       node.x = l.x + baseWidth / 2;
@@ -839,10 +839,6 @@ function canonicalize(attrs) {
   var newAttrs = {};
   if (attrs) {
     Object.entries(attrs).forEach(([k, v]) => {
-      if (typeof k === "string") {
-        k = k.toLowerCase();
-      }
-
       newAttrs[k] = v;
     });
   }
