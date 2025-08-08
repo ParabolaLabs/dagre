@@ -177,6 +177,17 @@ function swapWidthHeightOne(attrs) {
   let w = attrs.width;
   attrs.width = attrs.height;
   attrs.height = w;
+  // Also swap margins to keep them aligned with the swapped dimension
+  if (attrs) {
+    const ml = attrs.marginleft; const mr = attrs.marginright;
+    const mt = attrs.margintop;  const mb = attrs.marginbottom;
+    if (ml !== undefined || mr !== undefined || mt !== undefined || mb !== undefined) {
+      attrs.marginleft = mt;
+      attrs.marginright = mb;
+      attrs.margintop = ml;
+      attrs.marginbottom = mr;
+    }
+  }
 }
 
 function reverseY(g) {
@@ -2141,10 +2152,12 @@ function sep(nodeSep, edgeSep, reverseSep) {
   return (g, v, w) => {
     let vLabel = g.node(v);
     let wLabel = g.node(w);
+    let rankDir = (g.graph().rankdir || "tb").toLowerCase();
+    let isVerticalFlow = rankDir === "tb" || rankDir === "bt";
     let sum = 0;
     let delta;
 
-    // Add left margin of first node
+    // Add leading margin of first node for current flow axis (horizontal only)
     sum += (vLabel.marginleft || 0);
     sum += vLabel.width / 2;
     if (Object.hasOwn(vLabel, "labelpos")) {
@@ -2162,7 +2175,7 @@ function sep(nodeSep, edgeSep, reverseSep) {
     sum += (wLabel.dummy ? edgeSep : nodeSep) / 2;
 
     sum += wLabel.width / 2;
-    // Add right margin of second node
+    // Add trailing margin of second node for current flow axis (horizontal only)
     sum += (wLabel.marginright || 0);
     if (Object.hasOwn(wLabel, "labelpos")) {
       switch (wLabel.labelpos.toLowerCase()) {
@@ -2204,21 +2217,19 @@ function positionY(g) {
   let rankSep = g.graph().ranksep;
   let prevY = 0;
   layering.forEach(layer => {
-    const maxHeight = layer.reduce((acc, v) => {
-      const node = g.node(v);
-      const height = node.height + (node.margintop || 0) + (node.marginbottom || 0);
-      if (acc > height) {
-        return acc;
-      } else {
-        return height;
-      }
-    }, 0);
+    let maxInner = 0;
+    let maxTop = 0;
+    let maxBottom = 0;
     layer.forEach(v => {
-      // const node = g.node(v);
-      // const nodeHeight = node.height + (node.margintop || 0) + (node.marginbottom || 0);
-      g.node(v).y = prevY + maxHeight / 2;
+      const node = g.node(v);
+      maxTop = Math.max(maxTop, node.margintop || 0);
+      maxBottom = Math.max(maxBottom, node.marginbottom || 0);
+      maxInner = Math.max(maxInner, node.height);
     });
-    prevY += maxHeight + rankSep;
+    layer.forEach(v => {
+      g.node(v).y = prevY + maxTop + maxInner / 2;
+    });
+    prevY += maxTop + maxInner + maxBottom + rankSep;
   });
 }
 

@@ -68,13 +68,12 @@ describe("position", () => {
     g.setNode("b", { width: 50, height: 80, rank: 1, order: 0, margintop: 15, marginbottom: 25 });
     g.setEdge("a", "b");
     position(g);
-    // Layer 0 height should be 100 + 10 + 20 = 130
-    // Layer 1 height should be 80 + 15 + 25 = 120
-    // a.y should be 130/2 = 65
-    // prevY after layer 0 = 0 + 130 + 100 = 230
-    // b.y should be 230 + 120/2 = 230 + 60 = 290
-    expect(g.node("a").y).to.equal(65);
-    expect(g.node("b").y).to.equal(290);
+    // With per-layer max margins: layer0: top=10,bottom=20, inner=100
+    // a.y = 10 + 100/2 = 60
+    // prevY after layer 0 = 10 + 100 + 20 + 100 = 230
+    // layer1: top=15,bottom=25, inner=80 => b.y = 230 + 15 + 80/2 = 285
+    expect(g.node("a").y).to.equal(60);
+    expect(g.node("b").y).to.equal(285);
   });
 
   it("respects margins in compound graphs", () => {
