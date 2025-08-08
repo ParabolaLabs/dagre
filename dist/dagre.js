@@ -177,17 +177,6 @@ function swapWidthHeightOne(attrs) {
   let w = attrs.width;
   attrs.width = attrs.height;
   attrs.height = w;
-  // Also swap margins to keep them aligned with the swapped dimension
-  if (attrs) {
-    const ml = attrs.marginleft; const mr = attrs.marginright;
-    const mt = attrs.margintop;  const mb = attrs.marginbottom;
-    if (ml !== undefined || mr !== undefined || mt !== undefined || mb !== undefined) {
-      attrs.marginleft = mt;
-      attrs.marginright = mb;
-      attrs.margintop = ml;
-      attrs.marginbottom = mr;
-    }
-  }
 }
 
 function reverseY(g) {
@@ -754,14 +743,25 @@ function removeBorderNodes(g) {
   g.nodes().forEach(v => {
     if (g.children(v).length) {
       let node = g.node(v);
+      // Compute desired outer margin translation for this cluster
+      let dx = (node.marginleft || 0) - (node.marginright || 0);
+      let dy = (node.margintop || 0) - (node.marginbottom || 0);
+
+      // Shift entire subtree (children and their descendants) so margin acts as external spacing
+      if (dx || dy) {
+        shiftDescendants(g, v, dx, dy);
+      }
+
+      // Read border nodes after any shift
       let t = g.node(node.borderTop);
       let b = g.node(node.borderBottom);
       let l = g.node(node.borderLeft[node.borderLeft.length - 1]);
       let r = g.node(node.borderRight[node.borderRight.length - 1]);
 
-      // Calculate base dimensions from border nodes
+      // Calculate base dimensions: width from border nodes, height from actual children (ignore inter-rank margins)
       let baseWidth = Math.abs(r.x - l.x);
-      let baseHeight = Math.abs(b.y - t.y);
+      let vExtents = computeSubtreeVerticalExtents(g, v);
+      let baseHeight = vExtents.bottom - vExtents.top;
       
       // Add parent node's own margins to the calculated dimensions
       let marginleft = node.marginleft || 0;
@@ -769,10 +769,13 @@ function removeBorderNodes(g) {
       let margintop = node.margintop || 0;
       let marginbottom = node.marginbottom || 0;
 
-      node.width = baseWidth + marginleft + marginright;
-      node.height = baseHeight + margintop + marginbottom;
-      node.x = l.x + baseWidth / 2;
-      node.y = t.y + baseHeight / 2;
+      // Parent margins are padding: they shift the cluster position but should not increase cluster size
+      node.width = baseWidth;
+      node.height = baseHeight;
+      // Parent center aligns to children bounding box (not to layer margins)
+      // Include horizontal shift requested by child node margins (treat as external padding)
+      node.x = l.x + baseWidth / 2 + computeChildHorizontalShift(g, v);
+      node.y = vExtents.top + baseHeight / 2;
     }
   });
 
@@ -781,6 +784,63 @@ function removeBorderNodes(g) {
       g.removeNode(v);
     }
   });
+}
+
+function computeSubtreeVerticalExtents(g, parent) {
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  let stack = g.children(parent).slice();
+  while (stack.length) {
+    const v = stack.pop();
+    const n = g.node(v);
+    if (n && Object.hasOwn(n, 'y')) {
+      const top = n.y - n.height / 2;
+      const bottom = n.y + n.height / 2;
+      if (top < minY) minY = top;
+      if (bottom > maxY) maxY = bottom;
+    }
+    const kids = g.children(v);
+    if (kids && kids.length) stack.push.apply(stack, kids);
+  }
+  if (minY === Number.POSITIVE_INFINITY) {
+    minY = 0; maxY = 0;
+  }
+  return { top: minY, bottom: maxY };
+}
+
+function computeChildHorizontalShift(g, parent) {
+  // Sum or max? Using max keeps bbox tight and shifts based on the largest needed child margin
+  let shift = 0;
+  let stack = g.children(parent).slice();
+  while (stack.length) {
+    const v = stack.pop();
+    const n = g.node(v);
+    if (n) {
+      shift = Math.max(shift, (n.marginleft || 0));
+      // Right margin does not shift center; it expands right padding
+    }
+    const kids = g.children(v);
+    if (kids && kids.length) stack.push.apply(stack, kids);
+  }
+  return shift;
+}
+
+function shiftDescendants(g, parent, dx, dy) {
+  // Depth-first shift of all descendants of parent
+  let stack = g.children(parent).slice();
+  while (stack.length) {
+    const v = stack.pop();
+    const label = g.node(v);
+    if (label) {
+      if (Object.hasOwn(label, 'x')) label.x += dx;
+      if (Object.hasOwn(label, 'y')) label.y += dy;
+    }
+    // Continue through children
+    const kids = g.children(v);
+    if (kids && kids.length) {
+      stack.push.apply(stack, kids);
+    }
+  }
 }
 
 function removeSelfEdges(g) {
@@ -2194,7 +2254,8 @@ function sep(nodeSep, edgeSep, reverseSep) {
 
 function width(g, v) {
   const node = g.node(v);
-  return node.width + (node.marginleft || 0) + (node.marginright || 0);
+  // Margins are padding on parent clusters, not part of node width for separation
+  return node.width;
 }
 
 },{"../util":27,"@dagrejs/graphlib":29}],22:[function(require,module,exports){

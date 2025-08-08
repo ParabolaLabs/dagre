@@ -82,9 +82,8 @@ describe("layout", () => {
     layout(g);
     const ay = g.node("a").y;
     const by = g.node("b").y;
-    const effA = 100 + 10 + 20;
-    const effB = 80 + 15 + 25;
-    const expectedDy = effA / 2 + 100 + effB / 2;
+    // a.y = 10 + 50 = 60; prevY becomes 10 + 100 + 20 + 100 = 230; b.y = 230 + 15 + 40 = 285
+    const expectedDy = 285 - 60;
     expect(by - ay).to.equal(expectedDy);
   });
 

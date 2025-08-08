@@ -31,6 +31,7 @@
     "browserify": "17.0.0",
     "chai": "4.3.6",
     "eslint": "8.35.0",
+    "graphlib-dot": "^0.6.4",
     "jshint": "2.13.5",
     "jshint-stylish": "2.2.1",
     "karma": "6.4.1",

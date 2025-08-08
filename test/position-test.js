@@ -62,16 +62,15 @@ describe("position", () => {
     expect(g.node("b").x).to.equal(g.node("a").x + expectedSeparation);
   });
 
-  it("respects vertical margins in layer height calculation", () => {
+  it("vertical node margins push following ranks without resizing parents", () => {
     g.graph().ranksep = 100;
     g.setNode("a", { width: 50, height: 100, rank: 0, order: 0, margintop: 10, marginbottom: 20 });
     g.setNode("b", { width: 50, height: 80, rank: 1, order: 0, margintop: 15, marginbottom: 25 });
     g.setEdge("a", "b");
     position(g);
-    // With per-layer max margins: layer0: top=10,bottom=20, inner=100
-    // a.y = 10 + 100/2 = 60
-    // prevY after layer 0 = 10 + 100 + 20 + 100 = 230
-    // layer1: top=15,bottom=25, inner=80 => b.y = 230 + 15 + 80/2 = 285
+    // a.y = top(10) + height/2(50) = 60
+    // prevY after layer 0 = 10 + 100 + 20 + ranksep(100) = 230
+    // b.y = 230 + top(15) + 80/2 = 285
     expect(g.node("a").y).to.equal(60);
     expect(g.node("b").y).to.equal(285);
   });
