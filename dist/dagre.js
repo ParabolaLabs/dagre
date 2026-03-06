@@ -1876,10 +1876,10 @@ var dagre = (() => {
           delta = 0;
           let crossrankalign = g.graph().crossrankalign;
           if (crossrankalign === "top") {
-            let alignDelta = (vLabel.width - wLabel.width) / 2;
+            let alignDelta = (wLabel.width - vLabel.width) / 2;
             sum += reverseSep ? -alignDelta : alignDelta;
           } else if (crossrankalign === "bottom") {
-            let alignDelta = (wLabel.width - vLabel.width) / 2;
+            let alignDelta = (vLabel.width - wLabel.width) / 2;
             sum += reverseSep ? -alignDelta : alignDelta;
           }
           return sum;
