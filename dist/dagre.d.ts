@@ -57,9 +57,13 @@ export interface GraphLabel {
 export interface NodeConfig {
   width?: number | undefined;
   height?: number | undefined;
+  /** Minimum padding (in screen pixels) between the top edge of a compound node and its children. Values below the implicit gap (ranksep/2 for TB/BT, (nodesep+edgesep)/2 for LR/RL) are clamped. */
   paddingTop?: number | undefined;
+  /** Minimum padding (in screen pixels) between the bottom edge of a compound node and its children. */
   paddingBottom?: number | undefined;
+  /** Minimum padding (in screen pixels) between the left edge of a compound node and its children. */
   paddingLeft?: number | undefined;
+  /** Minimum padding (in screen pixels) between the right edge of a compound node and its children. */
   paddingRight?: number | undefined;
 }
 
@@ -99,12 +103,19 @@ export type Node<T = {}> = T & {
   height: number;
   class?: string | undefined;
   label?: string | undefined;
+  /** @deprecated Not used by dagre layout. Only used by dagre-d3 renderer for cosmetic box inflation. */
   padding?: number | undefined;
+  /** @deprecated Not used by dagre layout. Only used by dagre-d3 renderer for cosmetic box inflation. */
   paddingX?: number | undefined;
+  /** @deprecated Not used by dagre layout. Only used by dagre-d3 renderer for cosmetic box inflation. */
   paddingY?: number | undefined;
+  /** Minimum padding between the top edge of a compound node and its children (layout-affecting). */
   paddingTop?: number | undefined;
+  /** Minimum padding between the bottom edge of a compound node and its children (layout-affecting). */
   paddingBottom?: number | undefined;
+  /** Minimum padding between the left edge of a compound node and its children (layout-affecting). */
   paddingLeft?: number | undefined;
+  /** Minimum padding between the right edge of a compound node and its children (layout-affecting). */
   paddingRight?: number | undefined;
   rank?: number | undefined;
   rx?: number | undefined;
