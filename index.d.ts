@@ -57,6 +57,10 @@ export interface GraphLabel {
 export interface NodeConfig {
   width?: number | undefined;
   height?: number | undefined;
+  paddingTop?: number | undefined;
+  paddingBottom?: number | undefined;
+  paddingLeft?: number | undefined;
+  paddingRight?: number | undefined;
 }
 
 export interface EdgeConfig {
@@ -98,6 +102,10 @@ export type Node<T = {}> = T & {
   padding?: number | undefined;
   paddingX?: number | undefined;
   paddingY?: number | undefined;
+  paddingTop?: number | undefined;
+  paddingBottom?: number | undefined;
+  paddingLeft?: number | undefined;
+  paddingRight?: number | undefined;
   rank?: number | undefined;
   rx?: number | undefined;
   ry?: number | undefined;

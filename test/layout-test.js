@@ -286,6 +286,63 @@ describe("layout", () => {
     });
   });
 
+  describe("compound node padding", () => {
+    it("applies paddingTop in TB mode", () => {
+      g.graph().ranksep = 50;
+      g.setNode("sg", { paddingTop: 60 });
+      g.setNode("a", { width: 50, height: 50 });
+      g.setParent("a", "sg");
+      layout(g);
+      var sg = g.node("sg");
+      var a = g.node("a");
+      var topGap = (a.y - a.height / 2) - (sg.y - sg.height / 2);
+      expect(topGap).toBeCloseTo(60, 0);
+    });
+
+    it("maps padding correctly across rankdirs", () => {
+      ["TB", "BT", "LR", "RL"].forEach(rankdir => {
+        var g2 = new Graph({ multigraph: true, compound: true })
+          .setGraph({ rankdir: rankdir, ranksep: 50 })
+          .setDefaultEdgeLabel(() => ({}));
+        g2.setNode("sg", { paddingTop: 80 });
+        g2.setNode("a", { width: 50, height: 50 });
+        g2.setParent("a", "sg");
+        layout(g2);
+        var sg = g2.node("sg");
+        var a = g2.node("a");
+
+        // paddingTop in screen space always refers to the top (small-y) edge
+        var topGap = (a.y - a.height / 2) - (sg.y - sg.height / 2);
+        expect(topGap).toBeGreaterThanOrEqual(80 - 1);
+      });
+    });
+
+    it("uses default padding when only some sides are specified", () => {
+      g.graph().ranksep = 50;
+      g.setNode("sg", { paddingTop: 60 });
+      g.setNode("a", { width: 50, height: 50 });
+      g.setParent("a", "sg");
+      layout(g);
+      // Should not throw and should produce valid layout
+      var sg = g.node("sg");
+      expect(sg.width).toBeGreaterThan(0);
+      expect(sg.height).toBeGreaterThan(0);
+    });
+
+    it("clamps padding below implicit gap to the implicit gap", () => {
+      g.graph().ranksep = 50;
+      g.setNode("sg", { paddingTop: 5 });
+      g.setNode("a", { width: 50, height: 50 });
+      g.setParent("a", "sg");
+      layout(g);
+      var sg = g.node("sg");
+      var a = g.node("a");
+      // The implicit gap is ranksep/2 = 25, so padding of 5 should be clamped
+      var topGap = (a.y - a.height / 2) - (sg.y - sg.height / 2);
+      expect(topGap).toBeGreaterThanOrEqual(25 - 1);
+    });
+  });
+
   it("treats attributes with case-insensitivity", () => {
     g.graph().nodeSep = 200; // note the capital S
     g.setNode("a", { width: 50, height: 100 });

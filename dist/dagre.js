@@ -943,6 +943,26 @@ var dagre = (() => {
         label.borderTop = top;
         g.setParent(bottom, v);
         label.borderBottom = bottom;
+        let graphLabel = g.graph();
+        let swapDims = (graphLabel.rankdir || "").toLowerCase() === "lr" || (graphLabel.rankdir || "").toLowerCase() === "rl";
+        if (label._iPadTop !== void 0) {
+          let dim = Math.max(0, label._iPadTop - graphLabel.ranksep);
+          let topNode = g.node(top);
+          if (swapDims) {
+            topNode.width = dim;
+          } else {
+            topNode.height = dim;
+          }
+        }
+        if (label._iPadBottom !== void 0) {
+          let dim = Math.max(0, label._iPadBottom - graphLabel.ranksep);
+          let bottomNode = g.node(bottom);
+          if (swapDims) {
+            bottomNode.width = dim;
+          } else {
+            bottomNode.height = dim;
+          }
+        }
         children.forEach((child) => {
           dfs(g, root, nodeSep, weight, height, depths, child);
           let childNode = g.node(child);
@@ -1018,7 +1038,15 @@ var dagre = (() => {
         g.children().forEach(dfs);
       }
       function addBorderNode(g, prop, prefix, sg, sgNode, rank) {
-        let label = { width: 0, height: 0, rank, borderType: prop };
+        let dim = 0;
+        let padKey = prop === "borderLeft" ? "_iPadLeft" : "_iPadRight";
+        if (sgNode[padKey] !== void 0) {
+          let gl = g.graph();
+          dim = Math.max(0, sgNode[padKey] - (gl.nodesep + gl.edgesep) / 2);
+        }
+        let rd = ((g.graph() || {}).rankdir || "").toLowerCase();
+        let swapDims = rd === "lr" || rd === "rl";
+        let label = { width: swapDims ? 0 : dim, height: swapDims ? dim : 0, rank, borderType: prop };
         let prev = sgNode[prop][rank - 1];
         let curr = util.addDummyNode(g, "border", label, prefix);
         sgNode[prop][rank] = curr;
@@ -2002,6 +2030,35 @@ var dagre = (() => {
           });
           g.setNode(v, newNode);
           g.setParent(v, inputGraph.parent(v));
+          if (inputGraph.children(v).length) {
+            let rd = (graph.rankdir || "tb").toLowerCase();
+            let pt = Number(node.paddingtop);
+            let pb = Number(node.paddingbottom);
+            let pl = Number(node.paddingleft);
+            let pr = Number(node.paddingright);
+            let map;
+            switch (rd) {
+              case "tb":
+                map = [pt, pb, pl, pr];
+                break;
+              case "bt":
+                map = [pb, pt, pl, pr];
+                break;
+              case "lr":
+                map = [pl, pr, pt, pb];
+                break;
+              case "rl":
+                map = [pr, pl, pt, pb];
+                break;
+              default:
+                map = [pt, pb, pl, pr];
+                break;
+            }
+            let keys = ["_iPadTop", "_iPadBottom", "_iPadLeft", "_iPadRight"];
+            keys.forEach((k, i) => {
+              if (!isNaN(map[i])) newNode[k] = map[i];
+            });
+          }
         });
         inputGraph.edges().forEach((e) => {
           let edge = canonicalize(inputGraph.edge(e));
@@ -2161,10 +2218,14 @@ var dagre = (() => {
             let b = g.node(node.borderBottom);
             let l = g.node(node.borderLeft[node.borderLeft.length - 1]);
             let r = g.node(node.borderRight[node.borderRight.length - 1]);
-            node.width = Math.abs(r.x - l.x);
-            node.height = Math.abs(b.y - t.y);
-            node.x = l.x + node.width / 2;
-            node.y = t.y + node.height / 2;
+            let topEdge = t.y - t.height / 2;
+            let bottomEdge = b.y + b.height / 2;
+            let leftEdge = l.x - l.width / 2;
+            let rightEdge = r.x + r.width / 2;
+            node.width = rightEdge - leftEdge;
+            node.height = bottomEdge - topEdge;
+            node.x = leftEdge + node.width / 2;
+            node.y = topEdge + node.height / 2;
           }
         });
         g.nodes().forEach((v) => {
@@ -2279,7 +2340,7 @@ var dagre = (() => {
   // lib/version.js
   var require_version = __commonJS({
     "lib/version.js"(exports, module) {
-      module.exports = "2.0.4";
+      module.exports = "2.0.5-pre";
     }
   });
 
