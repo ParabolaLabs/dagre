@@ -77,4 +77,33 @@ describe("position", () => {
     expect(g.node("a").y).toBe(100 / 2);
     expect(g.node("b").y).toBe(100 / 2);
   });
+
+  it("aligns left edges when crossrankalign is top", () => {
+    g.graph().crossrankalign = "top";
+    g.setNode("a", { width: 100, height: 50, rank: 0, order: 0 });
+    g.setNode("b", { width: 60, height: 50, rank: 1, order: 0 });
+    g.setEdge("a", "b");
+    position(g);
+    // Left edges should align: x - width/2 should be the same
+    expect(g.node("a").x - 100 / 2).toBe(g.node("b").x - 60 / 2);
+  });
+
+  it("aligns right edges when crossrankalign is bottom", () => {
+    g.graph().crossrankalign = "bottom";
+    g.setNode("a", { width: 100, height: 50, rank: 0, order: 0 });
+    g.setNode("b", { width: 60, height: 50, rank: 1, order: 0 });
+    g.setEdge("a", "b");
+    position(g);
+    // Right edges should align: x + width/2 should be the same
+    expect(g.node("a").x + 100 / 2).toBe(g.node("b").x + 60 / 2);
+  });
+
+  it("centers nodes by default (crossrankalign center)", () => {
+    g.setNode("a", { width: 100, height: 50, rank: 0, order: 0 });
+    g.setNode("b", { width: 60, height: 50, rank: 1, order: 0 });
+    g.setEdge("a", "b");
+    position(g);
+    // Centers should align
+    expect(g.node("a").x).toBe(g.node("b").x);
+  });
 });

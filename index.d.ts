@@ -51,7 +51,10 @@ export interface GraphLabel {
   marginy?: number | undefined;
   acyclicer?: string | undefined;
   ranker?: string | undefined;
+  /** Within-rank alignment along the rank axis. Controls how nodes of different sizes are positioned within the same rank. Default: "center". */
   rankalign?: 'top' | 'center' | 'bottom' | undefined;
+  /** Cross-rank alignment along the perpendicular axis. Controls the BK algorithm's reference point so that connected nodes of different sizes align by their top edge, center, or bottom edge. Default: "center". */
+  crossrankalign?: 'top' | 'center' | 'bottom' | undefined;
 }
 
 export interface NodeConfig {

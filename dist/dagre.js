@@ -1750,10 +1750,22 @@ var dagre = (() => {
         return Object.values(xss).reduce((currentMinAndXs, xs) => {
           let max = Number.NEGATIVE_INFINITY;
           let min = Number.POSITIVE_INFINITY;
+          let crossrankalign = g.graph().crossrankalign;
           Object.entries(xs).forEach(([v, x]) => {
-            let halfWidth = width(g, v) / 2;
-            max = Math.max(x + halfWidth, max);
-            min = Math.min(x - halfWidth, min);
+            let w = width(g, v);
+            let lo, hi;
+            if (crossrankalign === "top") {
+              lo = x;
+              hi = x + w;
+            } else if (crossrankalign === "bottom") {
+              lo = x - w;
+              hi = x;
+            } else {
+              lo = x - w / 2;
+              hi = x + w / 2;
+            }
+            max = Math.max(hi, max);
+            min = Math.min(lo, min);
           });
           const newMin = max - min;
           if (newMin < currentMinAndXs[0]) {
@@ -1862,6 +1874,14 @@ var dagre = (() => {
             sum += reverseSep ? delta : -delta;
           }
           delta = 0;
+          let crossrankalign = g.graph().crossrankalign;
+          if (crossrankalign === "top") {
+            let alignDelta = (vLabel.width - wLabel.width) / 2;
+            sum += reverseSep ? -alignDelta : alignDelta;
+          } else if (crossrankalign === "bottom") {
+            let alignDelta = (wLabel.width - vLabel.width) / 2;
+            sum += reverseSep ? -alignDelta : alignDelta;
+          }
           return sum;
         };
       }
@@ -1881,7 +1901,17 @@ var dagre = (() => {
       function position(g) {
         g = util.asNonCompoundGraph(g);
         positionY(g);
-        Object.entries(positionX(g)).forEach(([v, x]) => g.node(v).x = x);
+        let xs = positionX(g);
+        let crossrankalign = g.graph().crossrankalign;
+        Object.entries(xs).forEach(([v, x]) => {
+          if (crossrankalign === "top") {
+            g.node(v).x = x + g.node(v).width / 2;
+          } else if (crossrankalign === "bottom") {
+            g.node(v).x = x - g.node(v).width / 2;
+          } else {
+            g.node(v).x = x;
+          }
+        });
       }
       function positionY(g) {
         let layering = util.buildLayerMatrix(g);
@@ -1997,8 +2027,8 @@ var dagre = (() => {
         inputGraph.graph().height = layoutGraph.graph().height;
       }
       var graphNumAttrs = ["nodesep", "edgesep", "ranksep", "marginx", "marginy"];
-      var graphDefaults = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "tb", rankalign: "center" };
-      var graphAttrs = ["acyclicer", "ranker", "rankdir", "align", "rankalign"];
+      var graphDefaults = { ranksep: 50, edgesep: 20, nodesep: 50, rankdir: "tb", rankalign: "center", crossrankalign: "center" };
+      var graphAttrs = ["acyclicer", "ranker", "rankdir", "align", "rankalign", "crossrankalign"];
       var nodeNumAttrs = ["width", "height", "rank"];
       var nodeDefaults = { width: 0, height: 0 };
       var edgeNumAttrs = ["minlen", "weight", "width", "height", "labeloffset"];
